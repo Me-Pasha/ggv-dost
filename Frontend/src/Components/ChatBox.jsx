@@ -13,14 +13,14 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
     if (scrollToAns.current) {
       const timer = setTimeout(() => {
         scrollToAns.current.scrollTop = scrollToAns.current.scrollHeight;
-      }, 700); // ⏱️ 500ms delay (adjust kar sakte ho)
+      }, 700); 
 
       return () => clearTimeout(timer);
     }
   }, [messages]);
   const formatText = (text) => {
     if (typeof text !== "string") {
-      return null; // ya JSON.stringify(text)
+      return null; 
     }
 
     return text.split("\n").map((line, i) => {
