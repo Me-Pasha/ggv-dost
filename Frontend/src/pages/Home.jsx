@@ -17,18 +17,17 @@ const Home = () => {
     gsap.set(chatBoxRef.current, { height: "0%", opacity: 0 });
 
     gsap.set(chatBoxRef.current, { height: "0%", opacity: 0 });
-    const test = async  () => {
-       const res = await fetch(
+    const test = async () => {
+      const res = await fetch(
         "https://fast-api-backend-j3dy.onrender.com/docs",
         {
           method: "get",
           headers: { "Content-Type": "application/json" },
-          
         }
       );
-     
+
       console.log(res);
-    }
+    };
     test();
   }, []);
 
@@ -56,7 +55,7 @@ const Home = () => {
           className="absolute bottom-10 right-8 px-4 py-2 bg-lime-400 font-semibold rounded-full flex items-center justify-center transition-transform duration-300 ease-in-out hover:scale-110"
           onClick={() => {
             setChatBoxOpen(true);
-            setRoboButton(true); 
+            setRoboButton(true);
           }}
         >
           <img src="/robo.svg" alt="icon" className="w-7 h-10" />
@@ -65,7 +64,11 @@ const Home = () => {
 
       <div ref={chatBoxRef} className="fixed bottom-0 w-full z-10">
         {ChatBoxOpen && (
-          <ChatBox setRoboButton={setRoboButton} setChatBoxOpen={setChatBoxOpen} ChatBoxOpen={ChatBoxOpen} />
+          <ChatBox
+            setRoboButton={setRoboButton}
+            setChatBoxOpen={setChatBoxOpen}
+            ChatBoxOpen={ChatBoxOpen}
+          />
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import ChatHeader from "./ChatHeader";
-
+import commonQuestions from "../Data/commonQuestions.json";
 const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState([]);
@@ -9,11 +9,27 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
 
   const [loading, setLoading] = useState(false);
   const scrollToAns = useRef();
+  useEffect(() => {
+    if (scrollToAns.current) {
+      const timer = setTimeout(() => {
+        scrollToAns.current.scrollTop = scrollToAns.current.scrollHeight;
+      }, 700); 
 
+      return () => clearTimeout(timer);
+    }
+  }, [messages]);
   const formatText = (text) => {
+    if (typeof text !== "string") {
+      return null; 
+    }
+
     return text.split("\n").map((line, i) => {
-      // • **Heading:** description
-      const boldMatch = line.match(/^\s*[•*]\s*\*\*(.+?):\*\*\s*(.*)/);
+      // • **Heading:**
+      const trimmed = line.trim();
+      const nextMsg = messages[i + 1];
+      const isFirstMessage = i === 0;
+      const nextIsUser = nextMsg?.role === "user";
+      const boldMatch = trimmed.match(/^\s*(?:[•*]\s*)?\*\*(.+?):\*\*\s*(.*)/);
 
       if (boldMatch) {
         return (
@@ -23,12 +39,35 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
           </div>
         );
       }
-
-      // normal bullet
-      if (line.startsWith("* ") || line.startsWith("• ")) {
+      if (trimmed === "Source:" || trimmed.startsWith("Source:")) {
         return (
-          <div key={i} className="ml-3">
-            • {line.replace(/^(\*|•)\s*/, "")}
+          <div key={i} className="mt-2 font-bold">
+            Source:
+          </div>
+        );
+      }
+      // normal bullet + link clickable
+      if (line.startsWith("* ") || line.startsWith("• ")) {
+        const content = line.replace(/^(\*|•)\s*/, "");
+        const isLink = content.startsWith("http");
+
+        return (
+          <div key={i} className="ml-3 flex ">
+            {isLink ? (
+              <>
+                {"👉 "}
+                <a
+                  href={content}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className=" underline text-gray-800  hover:text-blue-500 break-all underline-offset-2  text-base mb-2 underline-bg-gray-400"
+                >
+                  {content}
+                </a>
+              </>
+            ) : (
+              content
+            )}
           </div>
         );
       }
@@ -58,7 +97,7 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
 
     try {
       const res = await fetch(
-        "https://fast-api-backend-j3dy.onrender.com/ask",
+        "https://fastapi-dost-581010234750.asia-south1.run.app/ask",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -73,9 +112,6 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
         { role: "bot", text: data.answer || "No response" },
       ]);
       setLoading(false);
-      setTimeout(() => {
-        scrollToAns.current.scrollTop = scrollToAns.current.scrollHeight;
-      }, 500);
     } catch (err) {
       setLoading(false);
       setMessages((prev) => [
@@ -83,6 +119,14 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
         { role: "bot", text: "Limit Reached: Contact Developer" },
       ]);
     }
+  };
+  const handleFAQClick = (item) => {
+    setMessages((prev) => [...prev, { role: "user", text: item.question }]);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setMessages((prev) => [...prev, { role: "bot", text: item.answer }]);
+    }, 400);
   };
 
   return (
@@ -95,7 +139,7 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
 
       <div
         ref={scrollToAns}
-        className="flex flex-col overflow-y-auto no-scrollbar h-[70%] px-1 "
+        className="flex flex-col overflow-scroll no-scrollbar h-[80%] px-1 -mt-0"
       >
         {messages.length === 0 && !typingDone && (
           <div className="h-[60vh] flex items-center justify-center">
@@ -113,31 +157,68 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
             Feel free to ask anything about GGV
           </h1>
         )}
+        <div className="mt-1 ">
+          {messages.length === 0 && typingDone && (
+            <div className="flex flex-col gap-2 items-end mt-48">
+              {commonQuestions.map((item) => (
+                <h1
+                  key={item.id}
+                  onClick={() => handleFAQClick(item)}
+                  className="cursor-pointer text-purple-600 text-sm font-medium 
+                   w-fit px-3 py-2 border rounded-xl bg-white  
+                   hover:bg-purple-50"
+                >
+                  {item.question}
+                </h1>
+              ))}
+              {loading && (
+                <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mb-2 mt-2 w-fit">
+                  Thinking...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`p-3 rounded-xl mt-2 mb-1 mx-2  ${
-              msg.role === "user"
-                ? "bg-purple-500 text-white ml-auto mt-2 max-w-[80%]"
-                : "bg-blue-50 text-gray-900 break-words whitespace-pre-wrap w-fit"
-            }`}
-          >
-            {formatText(msg.text)}
-          </div>
-        ))}
+        {messages.map((msg, index) => {
+          const nextMsg = messages[index + 1];
+
+          const isFirstMessage = index === 0;
+          const nextIsUser = nextMsg?.role === "user";
+
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-xl mx-2 break-words whitespace-pre-wrap w-fit mb-2
+        ${
+          msg.role === "user"
+            ? "bg-purple-500 text-white ml-auto max-w-[84%]"
+            : "bg-blue-50 text-gray-900 max-w-[95%] "
+        }
+        ${msg.role === "user" && isFirstMessage ? "mt-2" : ""}
+        ${msg.role === "bot" && !nextIsUser ? "mb-4" : ""}
+      `}
+            >
+              {formatText(msg.text)}
+            </div>
+          );
+        })}
+
         {loading && (
-          <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mt-2 w-fit">
+          <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mb-4 mt-2 w-fit">
             Thinking...
           </div>
         )}
       </div>
 
       <div
-        className="text-black absolute bottom-6 bg-white border-2 border-gray-500 w-[92%] flex justify-between  ml-4 py-1 px-4 rounded-xl  
-       focus-within:border-[3px] focus-within:border-purple-600 
-                
-                transition-all duration-200"
+        className=" group
+    text-black absolute bottom-6 bg-white
+    border-2 border-gray-500 w-[93%]
+    flex justify-between ml-3 py-1 px-4 rounded-xl
+    transition-all duration-200
+    focus-within:border-[3px]
+    focus-within:border-purple-600"
       >
         <input
           type="text"
@@ -151,8 +232,16 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
           className="outline-none w-full text-base font-normal text-gray-900 "
           placeholder="Ask something?"
         />
-        <button onClick={handleSendMessage}>
-          <i className="ri-send-plane-2-line text-gray-700 text-xl"></i>
+        <button
+          onClick={handleSendMessage}
+          className="
+    transition-all duration-200
+    group-focus-within:text-purple-800
+    text-gray-700
+    active:scale-90
+  "
+        >
+          <i className="ri-send-plane-2-line  text-xl "></i>
         </button>
       </div>
     </div>
