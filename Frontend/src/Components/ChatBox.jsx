@@ -24,8 +24,12 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
     }
 
     return text.split("\n").map((line, i) => {
-      // • **Heading:** description
-      const boldMatch = line.match(/^\s*[•*]\s*\*\*(.+?):\*\*\s*(.*)/);
+      // • **Heading:**
+      const trimmed = line.trim();
+      const nextMsg = messages[i + 1];
+      const isFirstMessage = i === 0;
+      const nextIsUser = nextMsg?.role === "user";
+      const boldMatch = trimmed.match(/^\s*(?:[•*]\s*)?\*\*(.+?):\*\*\s*(.*)/);
 
       if (boldMatch) {
         return (
@@ -35,12 +39,35 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
           </div>
         );
       }
-
-      // normal bullet
-      if (line.startsWith("* ") || line.startsWith("• ")) {
+      if (trimmed === "Source:" || trimmed.startsWith("Source:")) {
         return (
-          <div key={i} className="ml-3">
-            • {line.replace(/^(\*|•)\s*/, "")}
+          <div key={i} className="mt-2 font-bold">
+            Source:
+          </div>
+        );
+      }
+      // normal bullet + link clickable
+      if (line.startsWith("* ") || line.startsWith("• ")) {
+        const content = line.replace(/^(\*|•)\s*/, "");
+        const isLink = content.startsWith("http");
+
+        return (
+          <div key={i} className="ml-3 flex ">
+            {isLink ? (
+              <>
+                {"👉 "}
+                <a
+                  href={content}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className=" underline text-gray-800  hover:text-blue-500 break-all underline-offset-2  text-base mb-2 underline-bg-gray-400"
+                >
+                  {content}
+                </a>
+              </>
+            ) : (
+              content
+            )}
           </div>
         );
       }
@@ -112,7 +139,7 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
 
       <div
         ref={scrollToAns}
-        className="flex flex-col overflow-scroll no-scrollbar h-[77%] px-1 "
+        className="flex flex-col overflow-scroll no-scrollbar h-[80%] px-1 -mt-0"
       >
         {messages.length === 0 && !typingDone && (
           <div className="h-[60vh] flex items-center justify-center">
@@ -132,20 +159,20 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
         )}
         <div className="mt-1 ">
           {messages.length === 0 && typingDone && (
-            <div className="flex flex-col gap-2 items-end mt-40">
+            <div className="flex flex-col gap-2 items-end mt-48">
               {commonQuestions.map((item) => (
                 <h1
                   key={item.id}
                   onClick={() => handleFAQClick(item)}
-                  className="cursor-pointer text-purple-600 text-sm font-medium
-                   w-fit px-3 py-2 border rounded-xl bg-white
+                  className="cursor-pointer text-purple-600 text-sm font-medium 
+                   w-fit px-3 py-2 border rounded-xl bg-white  
                    hover:bg-purple-50"
                 >
                   {item.question}
                 </h1>
               ))}
               {loading && (
-                <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mt-2 w-fit">
+                <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mb-2 mt-2 w-fit">
                   Thinking...
                 </div>
               )}
@@ -153,20 +180,32 @@ const ChatBox = ({ setChatBoxOpen, ChatBoxOpen, setRoboButton }) => {
           )}
         </div>
 
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`p-3 rounded-xl mt-1 mb-1 mx-2  ${
-              msg.role === "user"
-                ? "bg-purple-500 text-white ml-auto -mt-9 max-w-[84%]"
-                : "bg-blue-50 text-gray-900 break-words whitespace-pre-wrap w-fit mb- "
-            }`}
-          >
-            {formatText(msg.text)}
-          </div>
-        ))}
+        {messages.map((msg, index) => {
+          const nextMsg = messages[index + 1];
+
+          const isFirstMessage = index === 0;
+          const nextIsUser = nextMsg?.role === "user";
+
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-xl mx-2 break-words whitespace-pre-wrap w-fit mb-2
+        ${
+          msg.role === "user"
+            ? "bg-purple-500 text-white ml-auto max-w-[84%]"
+            : "bg-blue-50 text-gray-900 max-w-[95%] "
+        }
+        ${msg.role === "user" && isFirstMessage ? "mt-2" : ""}
+        ${msg.role === "bot" && !nextIsUser ? "mb-4" : ""}
+      `}
+            >
+              {formatText(msg.text)}
+            </div>
+          );
+        })}
+
         {loading && (
-          <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mt-2 w-fit">
+          <div className="bg-blue-50 text-gray-700 p-3 rounded-xl mx-2 mb-4 mt-2 w-fit">
             Thinking...
           </div>
         )}
